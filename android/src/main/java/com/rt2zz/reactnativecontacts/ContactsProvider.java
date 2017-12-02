@@ -15,14 +15,12 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-
 import static android.provider.ContactsContract.CommonDataKinds.Contactables;
 import static android.provider.ContactsContract.CommonDataKinds.Email;
 import static android.provider.ContactsContract.CommonDataKinds.Organization;
 import static android.provider.ContactsContract.CommonDataKinds.Phone;
 import static android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import static android.provider.ContactsContract.CommonDataKinds.StructuredPostal;
-import static android.provider.ContactsContract.CommonDataKinds.Note;
 
 public class ContactsProvider {
     public static final int ID_FOR_PROFILE_CONTACT = -1;
@@ -30,8 +28,6 @@ public class ContactsProvider {
     private static final List<String> JUST_ME_PROJECTION = new ArrayList<String>() {
         {
             add(ContactsContract.Data.CONTACT_ID);
-            add(ContactsContract.RawContacts.ACCOUNT_NAME);
-            add(ContactsContract.RawContacts.ACCOUNT_TYPE);
             add(ContactsContract.Data.LOOKUP_KEY);
             add(ContactsContract.Contacts.Data.MIMETYPE);
             add(ContactsContract.Profile.DISPLAY_NAME);
@@ -62,7 +58,6 @@ public class ContactsProvider {
             add(StructuredPostal.REGION);
             add(StructuredPostal.POSTCODE);
             add(StructuredPostal.COUNTRY);
-            add(Note.NOTE);
         }
     };
 
@@ -85,12 +80,12 @@ public class ContactsProvider {
     }
 
     public WritableArray getContactsMatchingString(String searchString) {
-        Map<String, com.rt2zz.reactnativecontacts.ContactsProvider.Contact> matchingContacts;
+        Map<String, Contact> matchingContacts;
         {
             Cursor cursor = contentResolver.query(ContactsContract.Data.CONTENT_URI,
                     FULL_PROJECTION.toArray(new String[FULL_PROJECTION.size()]),
                     ContactsContract.Contacts.DISPLAY_NAME_PRIMARY + " LIKE ?",
-                    new String[]{"%" + searchString + "%"}, null);
+                    new String[] { "%" + searchString + "%" }, null);
 
             try {
                 matchingContacts = loadContactsFrom(cursor);
@@ -102,14 +97,14 @@ public class ContactsProvider {
         }
 
         WritableArray contacts = Arguments.createArray();
-        for (com.rt2zz.reactnativecontacts.ContactsProvider.Contact contact : matchingContacts.values()) {
+        for (Contact contact : matchingContacts.values()) {
             contacts.pushMap(contact.toMap());
         }
         return contacts;
     }
 
     public WritableArray getContacts() {
-        Map<String, com.rt2zz.reactnativecontacts.ContactsProvider.Contact> justMe;
+        Map<String, Contact> justMe;
         {
             Cursor cursor = contentResolver.query(
                     Uri.withAppendedPath(ContactsContract.Profile.CONTENT_URI,
@@ -125,24 +120,15 @@ public class ContactsProvider {
             }
         }
 
-        Map<String, com.rt2zz.reactnativecontacts.ContactsProvider.Contact> everyoneElse;
+        Map<String, Contact> everyoneElse;
         {
             Cursor cursor = contentResolver.query(ContactsContract.Data.CONTENT_URI,
                     FULL_PROJECTION.toArray(new String[FULL_PROJECTION.size()]),
-                    ContactsContract.Data.MIMETYPE + "=? OR "
-                            + ContactsContract.Data.MIMETYPE + "=? OR "
-                            + ContactsContract.Data.MIMETYPE + "=? OR "
-                            + ContactsContract.Data.MIMETYPE + "=? OR "
-                            + ContactsContract.Data.MIMETYPE + "=? OR "
+                    ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=? OR "
+                            + ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=? OR "
                             + ContactsContract.Data.MIMETYPE + "=?",
-                    new String[]{
-                            Email.CONTENT_ITEM_TYPE,
-                            Phone.CONTENT_ITEM_TYPE,
-                            StructuredName.CONTENT_ITEM_TYPE,
-                            Organization.CONTENT_ITEM_TYPE,
-                            StructuredPostal.CONTENT_ITEM_TYPE,
-                            Note.CONTENT_ITEM_TYPE
-                    },
+                    new String[] { Email.CONTENT_ITEM_TYPE, Phone.CONTENT_ITEM_TYPE, StructuredName.CONTENT_ITEM_TYPE,
+                            Organization.CONTENT_ITEM_TYPE, StructuredPostal.CONTENT_ITEM_TYPE },
                     null);
 
             try {
@@ -155,16 +141,10 @@ public class ContactsProvider {
         }
 
         WritableArray contacts = Arguments.createArray();
-        for(
-                com.rt2zz.reactnativecontacts.ContactsProvider.Contact contact :justMe.values())
-
-        {
+        for (Contact contact : justMe.values()) {
             contacts.pushMap(contact.toMap());
         }
-        for(
-                com.rt2zz.reactnativecontacts.ContactsProvider.Contact contact :everyoneElse.values())
-
-        {
+        for (Contact contact : everyoneElse.values()) {
             contacts.pushMap(contact.toMap());
         }
 
@@ -172,9 +152,9 @@ public class ContactsProvider {
     }
 
     @NonNull
-    private Map<String, com.rt2zz.reactnativecontacts.ContactsProvider.Contact> loadContactsFrom(Cursor cursor) {
+    private Map<String, Contact> loadContactsFrom(Cursor cursor) {
 
-        Map<String, com.rt2zz.reactnativecontacts.ContactsProvider.Contact> map = new LinkedHashMap<>();
+        Map<String, Contact> map = new LinkedHashMap<>();
 
         while (cursor != null && cursor.moveToNext()) {
 
@@ -188,10 +168,10 @@ public class ContactsProvider {
             }
 
             if (!map.containsKey(contactId)) {
-                map.put(contactId, new com.rt2zz.reactnativecontacts.ContactsProvider.Contact(contactId));
+                map.put(contactId, new Contact(contactId));
             }
 
-            com.rt2zz.reactnativecontacts.ContactsProvider.Contact contact = map.get(contactId);
+            Contact contact = map.get(contactId);
 
             String mimeType = cursor.getString(cursor.getColumnIndex(ContactsContract.Data.MIMETYPE));
 
@@ -208,12 +188,7 @@ public class ContactsProvider {
                 }
             }
 
-            contact.accountName = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_NAME));
-            contact.accountId = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_TYPE));
-
-            if (mimeType.equals(Note.CONTENT_ITEM_TYPE)) {
-                contact.note = cursor.getString(cursor.getColumnIndex(Note.NOTE));
-            } else if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
+            if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
                 contact.givenName = cursor.getString(cursor.getColumnIndex(StructuredName.GIVEN_NAME));
                 contact.middleName = cursor.getString(cursor.getColumnIndex(StructuredName.MIDDLE_NAME));
                 contact.familyName = cursor.getString(cursor.getColumnIndex(StructuredName.FAMILY_NAME));
@@ -226,19 +201,19 @@ public class ContactsProvider {
                 if (!TextUtils.isEmpty(phoneNumber)) {
                     String label;
                     switch (type) {
-                        case Phone.TYPE_HOME:
-                            label = "home";
-                            break;
-                        case Phone.TYPE_WORK:
-                            label = "work";
-                            break;
-                        case Phone.TYPE_MOBILE:
-                            label = "mobile";
-                            break;
-                        default:
-                            label = "other";
+                    case Phone.TYPE_HOME:
+                        label = "home";
+                        break;
+                    case Phone.TYPE_WORK:
+                        label = "work";
+                        break;
+                    case Phone.TYPE_MOBILE:
+                        label = "mobile";
+                        break;
+                    default:
+                        label = "other";
                     }
-                    contact.phones.add(new com.rt2zz.reactnativecontacts.ContactsProvider.Contact.Item(label, phoneNumber));
+                    contact.phones.add(new Contact.Item(label, phoneNumber));
                 }
             } else if (mimeType.equals(Email.CONTENT_ITEM_TYPE)) {
                 String email = cursor.getString(cursor.getColumnIndex(Email.ADDRESS));
@@ -247,33 +222,33 @@ public class ContactsProvider {
                 if (!TextUtils.isEmpty(email)) {
                     String label;
                     switch (type) {
-                        case Email.TYPE_HOME:
-                            label = "home";
-                            break;
-                        case Email.TYPE_WORK:
-                            label = "work";
-                            break;
-                        case Email.TYPE_MOBILE:
-                            label = "mobile";
-                            break;
-                        case Email.TYPE_CUSTOM:
-                            if (cursor.getString(cursor.getColumnIndex(Email.LABEL)) != null) {
-                                label = cursor.getString(cursor.getColumnIndex(Email.LABEL)).toLowerCase();
-                            } else {
-                                label = "";
-                            }
-                            break;
-                        default:
-                            label = "other";
+                    case Email.TYPE_HOME:
+                        label = "home";
+                        break;
+                    case Email.TYPE_WORK:
+                        label = "work";
+                        break;
+                    case Email.TYPE_MOBILE:
+                        label = "mobile";
+                        break;
+                    case Email.TYPE_CUSTOM:
+                        if (cursor.getString(cursor.getColumnIndex(Email.LABEL)) != null) {
+                            label = cursor.getString(cursor.getColumnIndex(Email.LABEL)).toLowerCase();
+                        } else {
+                            label = "";
+                        }
+                        break;
+                    default:
+                        label = "other";
                     }
-                    contact.emails.add(new com.rt2zz.reactnativecontacts.ContactsProvider.Contact.Item(label, email));
+                    contact.emails.add(new Contact.Item(label, email));
                 }
             } else if (mimeType.equals(Organization.CONTENT_ITEM_TYPE)) {
                 contact.company = cursor.getString(cursor.getColumnIndex(Organization.COMPANY));
                 contact.jobTitle = cursor.getString(cursor.getColumnIndex(Organization.TITLE));
                 contact.department = cursor.getString(cursor.getColumnIndex(Organization.DEPARTMENT));
             } else if (mimeType.equals(StructuredPostal.CONTENT_ITEM_TYPE)) {
-                contact.postalAddresses.add(new com.rt2zz.reactnativecontacts.ContactsProvider.Contact.PostalAddressItem(cursor));
+                contact.postalAddresses.add(new Contact.PostalAddressItem(cursor));
             }
         }
 
@@ -283,7 +258,7 @@ public class ContactsProvider {
     public String getPhotoUriFromContactId(String contactId) {
         Cursor cursor = contentResolver.query(ContactsContract.Data.CONTENT_URI,
                 PHOTO_PROJECTION.toArray(new String[PHOTO_PROJECTION.size()]),
-                ContactsContract.RawContacts.CONTACT_ID + " = ?", new String[]{contactId}, null);
+                ContactsContract.RawContacts.CONTACT_ID + " = ?", new String[] { contactId }, null);
         try {
             if (cursor != null && cursor.moveToNext()) {
                 String rawPhotoURI = cursor.getString(cursor.getColumnIndex(Contactables.PHOTO_URI));
@@ -300,9 +275,6 @@ public class ContactsProvider {
     }
 
     private static class Contact {
-        private String note;
-        private String accountName;
-        private String accountId;
         private String contactId;
         private String displayName;
         private String givenName = "";
@@ -315,9 +287,9 @@ public class ContactsProvider {
         private String department = "";
         private boolean hasPhoto = false;
         private String photoUri;
-        private List<com.rt2zz.reactnativecontacts.ContactsProvider.Contact.Item> emails = new ArrayList<>();
-        private List<com.rt2zz.reactnativecontacts.ContactsProvider.Contact.Item> phones = new ArrayList<>();
-        private List<com.rt2zz.reactnativecontacts.ContactsProvider.Contact.PostalAddressItem> postalAddresses = new ArrayList<>();
+        private List<Item> emails = new ArrayList<>();
+        private List<Item> phones = new ArrayList<>();
+        private List<PostalAddressItem> postalAddresses = new ArrayList<>();
 
         public Contact(String contactId) {
             this.contactId = contactId;
@@ -325,11 +297,9 @@ public class ContactsProvider {
 
         public WritableMap toMap() {
             WritableMap contact = Arguments.createMap();
-            contact.putString("note", note);
-            contact.putString("accountName", accountName);
-            contact.putString("accountId", accountId);
             contact.putString("recordID", contactId);
             contact.putString("givenName", TextUtils.isEmpty(givenName) ? displayName : givenName);
+            contact.putString("displayName", displayName);
             contact.putString("middleName", middleName);
             contact.putString("familyName", familyName);
             contact.putString("prefix", prefix);
@@ -341,7 +311,7 @@ public class ContactsProvider {
             contact.putString("thumbnailPath", photoUri == null ? "" : photoUri);
 
             WritableArray phoneNumbers = Arguments.createArray();
-            for (com.rt2zz.reactnativecontacts.ContactsProvider.Contact.Item item : phones) {
+            for (Item item : phones) {
                 WritableMap map = Arguments.createMap();
                 map.putString("number", item.value);
                 map.putString("label", item.label);
@@ -350,7 +320,7 @@ public class ContactsProvider {
             contact.putArray("phoneNumbers", phoneNumbers);
 
             WritableArray emailAddresses = Arguments.createArray();
-            for (com.rt2zz.reactnativecontacts.ContactsProvider.Contact.Item item : emails) {
+            for (Item item : emails) {
                 WritableMap map = Arguments.createMap();
                 map.putString("email", item.value);
                 map.putString("label", item.label);
@@ -359,7 +329,7 @@ public class ContactsProvider {
             contact.putArray("emailAddresses", emailAddresses);
 
             WritableArray postalAddresses = Arguments.createArray();
-            for (com.rt2zz.reactnativecontacts.ContactsProvider.Contact.PostalAddressItem item : this.postalAddresses) {
+            for (PostalAddressItem item : this.postalAddresses) {
                 postalAddresses.pushMap(item.map);
             }
             contact.putArray("postalAddresses", postalAddresses);
@@ -403,13 +373,13 @@ public class ContactsProvider {
 
             static String getLabel(Cursor cursor) {
                 switch (cursor.getInt(cursor.getColumnIndex(StructuredPostal.TYPE))) {
-                    case StructuredPostal.TYPE_HOME:
-                        return "home";
-                    case StructuredPostal.TYPE_WORK:
-                        return "work";
-                    case StructuredPostal.TYPE_CUSTOM:
-                        final String label = cursor.getString(cursor.getColumnIndex(StructuredPostal.LABEL));
-                        return label != null ? label : "";
+                case StructuredPostal.TYPE_HOME:
+                    return "home";
+                case StructuredPostal.TYPE_WORK:
+                    return "work";
+                case StructuredPostal.TYPE_CUSTOM:
+                    final String label = cursor.getString(cursor.getColumnIndex(StructuredPostal.LABEL));
+                    return label != null ? label : "";
                 }
                 return "other";
             }

@@ -22,6 +22,9 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 
+import java.util.Map;
+import java.io.ByteArrayOutputStream;
+
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -32,6 +35,13 @@ import com.facebook.react.bridge.WritableArray;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
+
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
+import android.util.Base64;
+import android.provider.MediaStore;
+import java.io.IOException;
+import java.io.FileNotFoundException;
 
 public class ContactsManager extends ReactContextBaseJavaModule {
 
@@ -150,7 +160,6 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         String company = contact.hasKey("company") ? contact.getString("company") : null;
         String jobTitle = contact.hasKey("jobTitle") ? contact.getString("jobTitle") : null;
         String department = contact.hasKey("department") ? contact.getString("department") : null;
-        String note = contact.hasKey("note") ? contact.getString("note") : null;
 
         // String name = givenName;
         // name += middleName != "" ? " " + middleName : "";
@@ -200,12 +209,6 @@ public class ContactsManager extends ReactContextBaseJavaModule {
                 .withValue(StructuredName.FAMILY_NAME, familyName).withValue(StructuredName.PREFIX, prefix)
                 .withValue(StructuredName.SUFFIX, suffix);
         ops.add(op.build());
-
-        op = ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
-                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Note.CONTENT_ITEM_TYPE)
-                .withValue(ContactsContract.CommonDataKinds.Note.NOTE, note);
-
 
         op = ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                 .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -281,7 +284,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         String company = contact.hasKey("company") ? contact.getString("company") : null;
         String jobTitle = contact.hasKey("jobTitle") ? contact.getString("jobTitle") : null;
         String department = contact.hasKey("department") ? contact.getString("department") : null;
-        String note = contact.hasKey("note") ? contact.getString("note") : null;
+
         ReadableArray phoneNumbers = contact.hasKey("phoneNumbers") ? contact.getArray("phoneNumbers") : null;
         int numOfPhones = 0;
         String[] phones = null;
@@ -318,12 +321,12 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         ArrayList<ContentProviderOperation> ops = new ArrayList<ContentProviderOperation>();
 
         ContentProviderOperation.Builder op = ContentProviderOperation.newUpdate(RawContacts.CONTENT_URI)
-                .withSelection(ContactsContract.Data.CONTACT_ID + "=?", new String[]{String.valueOf(recordID)})
+                .withSelection(ContactsContract.Data.CONTACT_ID + "=?", new String[] { String.valueOf(recordID) })
                 .withValue(RawContacts.ACCOUNT_TYPE, null).withValue(RawContacts.ACCOUNT_NAME, null);
         ops.add(op.build());
 
         op = ContentProviderOperation.newUpdate(ContactsContract.Data.CONTENT_URI)
-                .withSelection(ContactsContract.Data.CONTACT_ID + "=?", new String[]{String.valueOf(recordID)})
+                .withSelection(ContactsContract.Data.CONTACT_ID + "=?", new String[] { String.valueOf(recordID) })
                 .withValue(ContactsContract.Data.MIMETYPE, StructuredName.CONTENT_ITEM_TYPE)
                 .withValue(StructuredName.GIVEN_NAME, givenName).withValue(StructuredName.MIDDLE_NAME, middleName)
                 .withValue(StructuredName.FAMILY_NAME, familyName).withValue(StructuredName.PREFIX, prefix)
@@ -332,7 +335,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
 
         op = ContentProviderOperation.newUpdate(ContactsContract.Data.CONTENT_URI)
                 .withSelection(ContactsContract.Data.CONTACT_ID + "=? AND " + ContactsContract.Data.MIMETYPE + " = ?",
-                        new String[]{String.valueOf(recordID), Organization.CONTENT_ITEM_TYPE})
+                        new String[] { String.valueOf(recordID), Organization.CONTENT_ITEM_TYPE })
                 .withValue(Organization.COMPANY, company).withValue(Organization.TITLE, jobTitle)
                 .withValue(Organization.DEPARTMENT, department);
         ops.add(op.build());
@@ -343,7 +346,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
             op = ContentProviderOperation.newUpdate(ContactsContract.Data.CONTENT_URI)
                     .withSelection(
                             ContactsContract.Data.CONTACT_ID + "=? AND " + ContactsContract.Data.MIMETYPE + " = ?",
-                            new String[]{String.valueOf(recordID), CommonDataKinds.Phone.CONTENT_ITEM_TYPE})
+                            new String[] { String.valueOf(recordID), CommonDataKinds.Phone.CONTENT_ITEM_TYPE })
                     .withValue(ContactsContract.Data.MIMETYPE, CommonDataKinds.Phone.CONTENT_ITEM_TYPE)
                     .withValue(CommonDataKinds.Phone.NUMBER, phones[i])
                     .withValue(CommonDataKinds.Phone.TYPE, phonesLabels[i]);
@@ -354,7 +357,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
             op = ContentProviderOperation.newUpdate(ContactsContract.Data.CONTENT_URI)
                     .withSelection(
                             ContactsContract.Data.RAW_CONTACT_ID + "=? AND " + ContactsContract.Data.MIMETYPE + " = ?",
-                            new String[]{String.valueOf(recordID), CommonDataKinds.Email.CONTENT_ITEM_TYPE})
+                            new String[] { String.valueOf(recordID), CommonDataKinds.Email.CONTENT_ITEM_TYPE })
                     .withValue(ContactsContract.Data.MIMETYPE, CommonDataKinds.Email.CONTENT_ITEM_TYPE)
                     .withValue(CommonDataKinds.Email.ADDRESS, emails[i])
                     .withValue(CommonDataKinds.Email.TYPE, emailsLabels[i]);
@@ -383,7 +386,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         Context context = getReactApplicationContext();
         ContentResolver cr = context.getContentResolver();
         String rawWhere = ContactsContract.Contacts._ID + " = ? ";
-        String[] whereArgs1 = new String[]{recordID};
+        String[] whereArgs1 = new String[] { recordID };
         Cursor cur = cr.query(ContactsContract.Contacts.CONTENT_URI, null, rawWhere, whereArgs1, null);
 
         if (cur != null && cur.getCount() > 0) {
@@ -432,12 +435,12 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         }
 
         requestCallback = callback;
-        ActivityCompat.requestPermissions(currentActivity, new String[]{PERMISSION_READ_CONTACTS},
+        ActivityCompat.requestPermissions(currentActivity, new String[] { PERMISSION_READ_CONTACTS },
                 PERMISSION_REQUEST_CODE);
     }
 
     protected static void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions,
-                                                     @NonNull int[] grantResults) {
+            @NonNull int[] grantResults) {
         if (requestCallback == null) {
             return;
         }
@@ -477,18 +480,18 @@ public class ContactsManager extends ReactContextBaseJavaModule {
     private int mapStringToPhoneType(String label) {
         int phoneType;
         switch (label) {
-            case "home":
-                phoneType = CommonDataKinds.Phone.TYPE_HOME;
-                break;
-            case "work":
-                phoneType = CommonDataKinds.Phone.TYPE_WORK;
-                break;
-            case "mobile":
-                phoneType = CommonDataKinds.Phone.TYPE_MOBILE;
-                break;
-            default:
-                phoneType = CommonDataKinds.Phone.TYPE_OTHER;
-                break;
+        case "home":
+            phoneType = CommonDataKinds.Phone.TYPE_HOME;
+            break;
+        case "work":
+            phoneType = CommonDataKinds.Phone.TYPE_WORK;
+            break;
+        case "mobile":
+            phoneType = CommonDataKinds.Phone.TYPE_MOBILE;
+            break;
+        default:
+            phoneType = CommonDataKinds.Phone.TYPE_OTHER;
+            break;
         }
         return phoneType;
     }
@@ -500,18 +503,18 @@ public class ContactsManager extends ReactContextBaseJavaModule {
     private int mapStringToEmailType(String label) {
         int emailType;
         switch (label) {
-            case "home":
-                emailType = CommonDataKinds.Email.TYPE_HOME;
-                break;
-            case "work":
-                emailType = CommonDataKinds.Email.TYPE_WORK;
-                break;
-            case "mobile":
-                emailType = CommonDataKinds.Email.TYPE_MOBILE;
-                break;
-            default:
-                emailType = CommonDataKinds.Email.TYPE_OTHER;
-                break;
+        case "home":
+            emailType = CommonDataKinds.Email.TYPE_HOME;
+            break;
+        case "work":
+            emailType = CommonDataKinds.Email.TYPE_WORK;
+            break;
+        case "mobile":
+            emailType = CommonDataKinds.Email.TYPE_MOBILE;
+            break;
+        default:
+            emailType = CommonDataKinds.Email.TYPE_OTHER;
+            break;
         }
         return emailType;
     }
@@ -519,17 +522,38 @@ public class ContactsManager extends ReactContextBaseJavaModule {
     private int mapStringToPostalAddressType(String label) {
         int postalAddressType;
         switch (label) {
-            case "home":
-                postalAddressType = CommonDataKinds.StructuredPostal.TYPE_HOME;
-                break;
-            case "work":
-                postalAddressType = CommonDataKinds.StructuredPostal.TYPE_WORK;
-                break;
-            default:
-                postalAddressType = CommonDataKinds.StructuredPostal.TYPE_OTHER;
-                break;
+        case "home":
+            postalAddressType = CommonDataKinds.StructuredPostal.TYPE_HOME;
+            break;
+        case "work":
+            postalAddressType = CommonDataKinds.StructuredPostal.TYPE_WORK;
+            break;
+        default:
+            postalAddressType = CommonDataKinds.StructuredPostal.TYPE_OTHER;
+            break;
         }
         return postalAddressType;
+    }
+
+    @ReactMethod
+    public void getBase64String(String uri, Callback callback) {
+        try {
+            Bitmap image = MediaStore.Images.Media.getBitmap(getReactApplicationContext().getContentResolver(),
+                    Uri.parse(uri));
+            if (image == null) {
+                callback.invoke("Failed to decode Bitmap, uri: " + uri);
+            } else {
+                callback.invoke(null, bitmapToBase64(image));
+            }
+        } catch (IOException e) {
+        }
+    }
+
+    private String bitmapToBase64(Bitmap bitmap) {
+        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
+        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
+        byte[] byteArray = byteArrayOutputStream.toByteArray();
+        return Base64.encodeToString(byteArray, Base64.DEFAULT);
     }
 
     @Override
