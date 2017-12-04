@@ -6,6 +6,7 @@ import android.net.Uri;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
+import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableArray;
@@ -15,6 +16,7 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+
 import static android.provider.ContactsContract.CommonDataKinds.Contactables;
 import static android.provider.ContactsContract.CommonDataKinds.Email;
 import static android.provider.ContactsContract.CommonDataKinds.Organization;
@@ -191,10 +193,11 @@ public class ContactsProvider {
                 }
             }
 
-            contact.accountName = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_NAME));
-            contact.accountId = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_TYPE));
-
-            if (mimeType.equals(Note.CONTENT_ITEM_TYPE)) {
+            if (mimeType.equals(ContactsContract.RawContacts.ACCOUNT_TYPE)) {
+                contact.accountName = cursor
+                        .getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_NAME));
+                contact.accountId = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_TYPE));
+            } else if (mimeType.equals(Note.CONTENT_ITEM_TYPE)) {
                 contact.note = cursor.getString(cursor.getColumnIndex(Note.NOTE));
             } else if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
                 contact.givenName = cursor.getString(cursor.getColumnIndex(StructuredName.GIVEN_NAME));
