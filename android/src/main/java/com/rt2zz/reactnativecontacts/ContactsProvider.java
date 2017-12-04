@@ -21,6 +21,7 @@ import static android.provider.ContactsContract.CommonDataKinds.Organization;
 import static android.provider.ContactsContract.CommonDataKinds.Phone;
 import static android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import static android.provider.ContactsContract.CommonDataKinds.StructuredPostal;
+import static android.provider.ContactsContract.CommonDataKinds.Note;
 
 public class ContactsProvider {
     public static final int ID_FOR_PROFILE_CONTACT = -1;
@@ -58,6 +59,7 @@ public class ContactsProvider {
             add(StructuredPostal.REGION);
             add(StructuredPostal.POSTCODE);
             add(StructuredPostal.COUNTRY);
+            add(Note.NOTE);
         }
     };
 
@@ -126,9 +128,10 @@ public class ContactsProvider {
                     FULL_PROJECTION.toArray(new String[FULL_PROJECTION.size()]),
                     ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=? OR "
                             + ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=? OR "
-                            + ContactsContract.Data.MIMETYPE + "=?",
+                            + ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=?",
                     new String[] { Email.CONTENT_ITEM_TYPE, Phone.CONTENT_ITEM_TYPE, StructuredName.CONTENT_ITEM_TYPE,
-                            Organization.CONTENT_ITEM_TYPE, StructuredPostal.CONTENT_ITEM_TYPE },
+                            Organization.CONTENT_ITEM_TYPE, StructuredPostal.CONTENT_ITEM_TYPE,
+                            Note.CONTENT_ITEM_TYPE },
                     null);
 
             try {
@@ -188,7 +191,12 @@ public class ContactsProvider {
                 }
             }
 
-            if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
+            contact.accountName = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_NAME));
+            contact.accountId = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_TYPE));
+
+            if (mimeType.equals(Note.CONTENT_ITEM_TYPE)) {
+                contact.note = cursor.getString(cursor.getColumnIndex(Note.NOTE));
+            } else if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
                 contact.givenName = cursor.getString(cursor.getColumnIndex(StructuredName.GIVEN_NAME));
                 contact.middleName = cursor.getString(cursor.getColumnIndex(StructuredName.MIDDLE_NAME));
                 contact.familyName = cursor.getString(cursor.getColumnIndex(StructuredName.FAMILY_NAME));
@@ -275,7 +283,10 @@ public class ContactsProvider {
     }
 
     private static class Contact {
+        private String note;
         private String contactId;
+        private String accountName;
+        private String accountId;
         private String displayName;
         private String givenName = "";
         private String middleName = "";
@@ -297,6 +308,9 @@ public class ContactsProvider {
 
         public WritableMap toMap() {
             WritableMap contact = Arguments.createMap();
+            contact.putString("note", note);
+            contact.putString("accountName", accountName);
+            contact.putString("accountId", accountId);
             contact.putString("recordID", contactId);
             contact.putString("givenName", TextUtils.isEmpty(givenName) ? displayName : givenName);
             contact.putString("displayName", displayName);
