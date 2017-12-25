@@ -6,7 +6,6 @@ import android.net.Uri;
 import android.provider.ContactsContract;
 import android.support.annotation.NonNull;
 import android.text.TextUtils;
-import android.util.Log;
 
 import com.facebook.react.bridge.Arguments;
 import com.facebook.react.bridge.WritableArray;
@@ -23,7 +22,6 @@ import static android.provider.ContactsContract.CommonDataKinds.Organization;
 import static android.provider.ContactsContract.CommonDataKinds.Phone;
 import static android.provider.ContactsContract.CommonDataKinds.StructuredName;
 import static android.provider.ContactsContract.CommonDataKinds.StructuredPostal;
-import static android.provider.ContactsContract.CommonDataKinds.Note;
 
 public class ContactsProvider {
     public static final int ID_FOR_PROFILE_CONTACT = -1;
@@ -61,7 +59,6 @@ public class ContactsProvider {
             add(StructuredPostal.REGION);
             add(StructuredPostal.POSTCODE);
             add(StructuredPostal.COUNTRY);
-            add(Note.NOTE);
         }
     };
 
@@ -130,10 +127,9 @@ public class ContactsProvider {
                     FULL_PROJECTION.toArray(new String[FULL_PROJECTION.size()]),
                     ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=? OR "
                             + ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=? OR "
-                            + ContactsContract.Data.MIMETYPE + "=? OR " + ContactsContract.Data.MIMETYPE + "=?",
+                            + ContactsContract.Data.MIMETYPE + "=?",
                     new String[] { Email.CONTENT_ITEM_TYPE, Phone.CONTENT_ITEM_TYPE, StructuredName.CONTENT_ITEM_TYPE,
-                            Organization.CONTENT_ITEM_TYPE, StructuredPostal.CONTENT_ITEM_TYPE,
-                            Note.CONTENT_ITEM_TYPE },
+                            Organization.CONTENT_ITEM_TYPE, StructuredPostal.CONTENT_ITEM_TYPE },
                     null);
 
             try {
@@ -164,10 +160,15 @@ public class ContactsProvider {
         while (cursor != null && cursor.moveToNext()) {
 
             int columnIndex = cursor.getColumnIndex(ContactsContract.Data.CONTACT_ID);
-            String contactId;
+            String contactId = "";
             if (columnIndex != -1) {
-                contactId = cursor.getString(columnIndex);
-            } else {
+                try {
+                    contactId = cursor.getString(columnIndex);
+                } catch (IllegalStateException e) {
+
+                }
+            }
+            if (contactId.equals("")) {
                 //todo - double check this, it may not be necessary any more
                 contactId = String.valueOf(ID_FOR_PROFILE_CONTACT);//no contact id for 'ME' user
             }
@@ -193,13 +194,7 @@ public class ContactsProvider {
                 }
             }
 
-            if (mimeType.equals(ContactsContract.RawContacts.ACCOUNT_TYPE)) {
-                contact.accountName = cursor
-                        .getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_NAME));
-                contact.accountId = cursor.getString(cursor.getColumnIndex(ContactsContract.RawContacts.ACCOUNT_TYPE));
-            } else if (mimeType.equals(Note.CONTENT_ITEM_TYPE)) {
-                contact.note = cursor.getString(cursor.getColumnIndex(Note.NOTE));
-            } else if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
+            if (mimeType.equals(StructuredName.CONTENT_ITEM_TYPE)) {
                 contact.givenName = cursor.getString(cursor.getColumnIndex(StructuredName.GIVEN_NAME));
                 contact.middleName = cursor.getString(cursor.getColumnIndex(StructuredName.MIDDLE_NAME));
                 contact.familyName = cursor.getString(cursor.getColumnIndex(StructuredName.FAMILY_NAME));
@@ -286,10 +281,7 @@ public class ContactsProvider {
     }
 
     private static class Contact {
-        private String note;
         private String contactId;
-        private String accountName;
-        private String accountId;
         private String displayName;
         private String givenName = "";
         private String middleName = "";
@@ -311,12 +303,8 @@ public class ContactsProvider {
 
         public WritableMap toMap() {
             WritableMap contact = Arguments.createMap();
-            contact.putString("note", note);
-            contact.putString("accountName", accountName);
-            contact.putString("accountId", accountId);
             contact.putString("recordID", contactId);
             contact.putString("givenName", TextUtils.isEmpty(givenName) ? displayName : givenName);
-            contact.putString("displayName", displayName);
             contact.putString("middleName", middleName);
             contact.putString("familyName", familyName);
             contact.putString("prefix", prefix);

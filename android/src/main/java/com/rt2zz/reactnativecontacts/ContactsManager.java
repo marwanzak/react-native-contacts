@@ -22,9 +22,6 @@ import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.LocalBroadcastManager;
 
-import java.util.Map;
-import java.io.ByteArrayOutputStream;
-
 import com.facebook.react.bridge.Callback;
 import com.facebook.react.bridge.ReactApplicationContext;
 import com.facebook.react.bridge.ReactContextBaseJavaModule;
@@ -35,13 +32,6 @@ import com.facebook.react.bridge.WritableArray;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
-
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
-import android.util.Base64;
-import android.provider.MediaStore;
-import java.io.IOException;
-import java.io.FileNotFoundException;
 
 public class ContactsManager extends ReactContextBaseJavaModule {
 
@@ -160,7 +150,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         String company = contact.hasKey("company") ? contact.getString("company") : null;
         String jobTitle = contact.hasKey("jobTitle") ? contact.getString("jobTitle") : null;
         String department = contact.hasKey("department") ? contact.getString("department") : null;
-        String note = contact.hasKey("note") ? contact.getString("note") : null;
+
         // String name = givenName;
         // name += middleName != "" ? " " + middleName : "";
         // name += familyName != "" ? " " + familyName : "";
@@ -200,11 +190,6 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         ContentProviderOperation.Builder op = ContentProviderOperation.newInsert(RawContacts.CONTENT_URI)
                 .withValue(RawContacts.ACCOUNT_TYPE, null).withValue(RawContacts.ACCOUNT_NAME, null);
         ops.add(op.build());
-
-        op = ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
-                .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
-                .withValue(ContactsContract.Data.MIMETYPE, ContactsContract.CommonDataKinds.Note.CONTENT_ITEM_TYPE)
-                .withValue(ContactsContract.CommonDataKinds.Note.NOTE, note);
 
         op = ContentProviderOperation.newInsert(ContactsContract.Data.CONTENT_URI)
                 .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
@@ -253,7 +238,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
                         .withValue(ContactsContract.Data.MIMETYPE, CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE)
                         .withValue(CommonDataKinds.StructuredPostal.TYPE,
                                 mapStringToPostalAddressType(address.getString("label")))
-                        .withValue(CommonDataKinds.StructuredPostal.STREET, address.getString("street"))
+                        //                        .withValue(CommonDataKinds.StructuredPostal.STREET, address.getString("street"))
                         .withValue(CommonDataKinds.StructuredPostal.CITY, address.getString("city"))
                         .withValue(CommonDataKinds.StructuredPostal.REGION, address.getString("state"))
                         .withValue(CommonDataKinds.StructuredPostal.POSTCODE, address.getString("postCode"))
@@ -289,8 +274,7 @@ public class ContactsManager extends ReactContextBaseJavaModule {
         String company = contact.hasKey("company") ? contact.getString("company") : null;
         String jobTitle = contact.hasKey("jobTitle") ? contact.getString("jobTitle") : null;
         String department = contact.hasKey("department") ? contact.getString("department") : null;
-        String note = contact.hasKey("note") ? contact.getString("note") : null;
-        
+
         ReadableArray phoneNumbers = contact.hasKey("phoneNumbers") ? contact.getArray("phoneNumbers") : null;
         int numOfPhones = 0;
         String[] phones = null;
@@ -539,27 +523,6 @@ public class ContactsManager extends ReactContextBaseJavaModule {
             break;
         }
         return postalAddressType;
-    }
-
-    @ReactMethod
-    public void getBase64String(String uri, Callback callback) {
-        try {
-            Bitmap image = MediaStore.Images.Media.getBitmap(getReactApplicationContext().getContentResolver(),
-                    Uri.parse(uri));
-            if (image == null) {
-                callback.invoke("Failed to decode Bitmap, uri: " + uri);
-            } else {
-                callback.invoke(null, bitmapToBase64(image));
-            }
-        } catch (IOException e) {
-        }
-    }
-
-    private String bitmapToBase64(Bitmap bitmap) {
-        ByteArrayOutputStream byteArrayOutputStream = new ByteArrayOutputStream();
-        bitmap.compress(Bitmap.CompressFormat.PNG, 100, byteArrayOutputStream);
-        byte[] byteArray = byteArrayOutputStream.toByteArray();
-        return Base64.encodeToString(byteArray, Base64.DEFAULT);
     }
 
     @Override
