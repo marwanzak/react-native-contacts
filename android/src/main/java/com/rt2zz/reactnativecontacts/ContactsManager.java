@@ -237,12 +237,12 @@ public class ContactsManager extends ReactContextBaseJavaModule {
                         .withValueBackReference(ContactsContract.Data.RAW_CONTACT_ID, 0)
                         .withValue(ContactsContract.Data.MIMETYPE, CommonDataKinds.StructuredPostal.CONTENT_ITEM_TYPE)
                         .withValue(CommonDataKinds.StructuredPostal.TYPE,
-                                mapStringToPostalAddressType(address.getString("label")))
+                                mapStringToPostalAddressType(address.getString("label")));
                         //                        .withValue(CommonDataKinds.StructuredPostal.STREET, address.getString("street"))
-                        .withValue(CommonDataKinds.StructuredPostal.CITY, address.getString("city"))
-                        .withValue(CommonDataKinds.StructuredPostal.REGION, address.getString("state"))
-                        .withValue(CommonDataKinds.StructuredPostal.POSTCODE, address.getString("postCode"))
-                        .withValue(CommonDataKinds.StructuredPostal.COUNTRY, address.getString("country"));
+                        // .withValue(CommonDataKinds.StructuredPostal.CITY, address.getString("city"))
+                        // .withValue(CommonDataKinds.StructuredPostal.REGION, address.getString("state"))
+                        // .withValue(CommonDataKinds.StructuredPostal.POSTCODE, address.getString("postCode"))
+                        // .withValue(CommonDataKinds.StructuredPostal.COUNTRY, address.getString("country"));
 
                 ops.add(op.build());
             }
